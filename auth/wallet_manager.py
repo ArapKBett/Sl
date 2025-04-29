@@ -1,20 +1,17 @@
-import hmac
 import hashlib
+import base58
 from bip32utils import BIP32Key
-from typing import List, Dict
+from typing import Dict
 
 class HdWalletManager:
+    HARDENED = 0x80000000  # Manually defined hardened constant
+    
     def __init__(self, seed: bytes = None):
-        # Generate proper 256-bit entropy if no seed provided
         if not seed:
-            seed = hmac.new(
-                b'edu-sim-seed',
-                b'initial-seed', 
-                hashlib.sha512
-            ).digest()
+            seed = hashlib.sha256(b'default-edu-seed').digest()
             
-        if len(seed) < 16:  # 128 bits minimum
-            raise ValueError("Seed must be at least 16 bytes (128 bits)")
+        if len(seed) < 16:
+            raise ValueError("Seed must be at least 16 bytes")
             
         self.root_key = BIP32Key.fromEntropy(seed)
         
@@ -22,9 +19,11 @@ class HdWalletManager:
         key = self.root_key
         for index in path.split('/')[1:]:
             if index.endswith("'"):
-                key = key.ChildKey(int(index[:-1]) | BIP32Key.HARDEN)
+                idx = int(index[:-1]) | self.HARDENED
             else:
-                key = key.ChildKey(int(index))
+                idx = int(index)
+            key = key.ChildKey(idx)
+            
         return {
             'path': path,
             'private_key': key.WalletImportFormat(),
@@ -34,6 +33,5 @@ class HdWalletManager:
     
     def _generate_address(self, public_key: bytes) -> str:
         sha = hashlib.sha256(public_key).digest()
-        ripemd = hashlib.new('ripemd160')
-        ripemd.update(sha)
-        return base58.b58encode_check(ripemd.digest()).decode()
+        ripemd = hashlib.new('ripemd160', sha).digest()
+        return base58.b58encode_check(ripemd).decode()
