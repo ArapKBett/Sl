@@ -4,7 +4,18 @@ from bip32utils import BIP32Key
 from typing import List, Dict
 
 class HdWalletManager:
-    def __init__(self, seed: bytes):
+    def __init__(self, seed: bytes = None):
+        # Generate proper 256-bit entropy if no seed provided
+        if not seed:
+            seed = hmac.new(
+                b'edu-sim-seed',
+                b'initial-seed', 
+                hashlib.sha512
+            ).digest()
+            
+        if len(seed) < 16:  # 128 bits minimum
+            raise ValueError("Seed must be at least 16 bytes (128 bits)")
+            
         self.root_key = BIP32Key.fromEntropy(seed)
         
     def derive_account(self, path: str) -> Dict:
