@@ -7,7 +7,10 @@ class PumpManagerShell(Cmd):
     
     def __init__(self):
         super().__init__()
-        self.wallet = HdWalletManager(b'simulated_seed')
+        # Initialize with proper entropy
+        self.wallet = HdWalletManager(
+            seed=hashlib.sha256(b'proper-seed-for-simulation').digest()
+        )
         self.deployer = TokenDeployer(
             self.wallet.derive_account("m/44'/60'/0'/0/0"))
         
